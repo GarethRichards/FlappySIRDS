@@ -18,10 +18,15 @@ class FIGFont {
 public:
 	FIGFont();
 	void OpenFontFile(const std::string &figFontData);
-	const FigCharacter GetCharacter(int inChar) const;
+	FigCharacter GetCharacter(int inChar) const;
 	
 private:
-	int charheight, maxlen, smush, cmtlines, ffright2left, smush2;
+	int charheight = 0;
+	int maxlen = 0;
+	int smush = 0;
+	int cmtlines = 0;
+	int ffright2left = 0;
+	int smush2 = 0;
 	std::map<int , FigCharacter> FigFont;
 };
 
@@ -41,13 +46,13 @@ public:
 	void DrawString(const DirectX::XMFLOAT3 translate, const std::string &Text);
 	int DrawCharacter(const DirectX::XMFLOAT3 translate, int inChar);
 	void SetBlockSize(float size) { blockSize_ = size; }
-protected:
+private:
 	DirectX::XMFLOAT4X4 projection_;
 	DirectX::XMFLOAT4X4 view_;
 	DirectX::XMFLOAT4X4 world_;
 	DirectX::XMFLOAT4X4 orientation_;
 	FIGFont font_;
-	float blockSize_;
-	int rows_;
+	float blockSize_ = 0;
+	int rows_ = 0;
 	std::unique_ptr<DirectX::GeometricPrimitive> cube_;
 };

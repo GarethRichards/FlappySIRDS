@@ -189,8 +189,10 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="3dText.h" />
+    <ClInclude Include="3DText.h" />
     <ClInclude Include="DebugMe.h" />
+    <ClInclude Include="FlappyData.h" />
+    <ClInclude Include="Game.h" />
     <CLInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
@@ -199,6 +201,7 @@
   <ItemGroup>
     <ClCompile Include="3DText.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>

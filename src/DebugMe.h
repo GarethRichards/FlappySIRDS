@@ -26,9 +26,9 @@ struct DebugOutImpl {
 private:
 	static std::string wtoa(const wchar_t* ptr, size_t len = -1){
 		if (len == -1) len = wcslen(ptr);
-		std::string r(WideCharToMultiByte(CP_THREAD_ACP, 0, ptr, len, nullptr, 0, 0, 0), '\0');
+		std::string r(WideCharToMultiByte(CP_THREAD_ACP, 0, ptr, static_cast<int>(len), nullptr, 0, 0, 0), '\0');
 		if (r.size() == 0) throw std::system_error(GetLastError(), std::system_category());
-		if (0 == WideCharToMultiByte(CP_THREAD_ACP, 0, ptr, len, &r[0], r.size(), 0, 0))
+		if (0 == WideCharToMultiByte(CP_THREAD_ACP, 0, ptr, static_cast<int>(len), &r[0], static_cast<int>(r.size()), 0, 0))
 			throw std::system_error(GetLastError(), std::system_category(), "error converting wide string to narrow");
 		return r;
 	}

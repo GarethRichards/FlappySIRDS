@@ -11,11 +11,9 @@
 using namespace std;
 using namespace DirectX;
 
-FigCharacter ReadFontChar(const std::string &FigData, size_t &current, size_t &next, int charheight);
+FigCharacter ReadFontChar(const std::string_view FigData, size_t &current, size_t &next, int charheight);
 
-FIGFont::FIGFont()
-{
-}
+FIGFont::FIGFont() = default;
 
 void FIGFont::OpenFontFile(const std::string &FigData)
 {
@@ -25,9 +23,8 @@ void FIGFont::OpenFontFile(const std::string &FigData)
 	next = FigData.find_first_of('\n', current);
 	string line = FigData.substr(current, next - current);
 	current = next + 1;
-	int numsread = 0;
 	char hardblank;
-	numsread = sscanf_s(&line[0]+5, "%*c%c %d %*d %d %d %d %d %d",
+	std::ignore = sscanf_s(&line[0]+5, "%*c%c %d %*d %d %d %d %d %d",
 		&hardblank, 1, &charheight, &maxlen, &smush, &cmtlines,
 		&ffright2left, &smush2);
 	for (int i = 0; i < cmtlines; i++){
@@ -49,19 +46,18 @@ void FIGFont::OpenFontFile(const std::string &FigData)
 	}
 }
 
-const FigCharacter FIGFont::GetCharacter(int inChar) const
+FigCharacter FIGFont::GetCharacter(int inChar) const
 {	
 	auto iter = FigFont.find(inChar);
 	return (*iter).second;
 }
 
-FigCharacter ReadFontChar(const std::string &FigData, size_t &current, size_t &next, int charheight)
+FigCharacter ReadFontChar(const std::string_view FigData, size_t &current, size_t &next, int charheight)
 {
-	int row;
 	string line;
 	FigCharacter character;
 	character.maxWidth = 0;
-	for (row = 0; row<charheight; row++) {
+	for (int row = 0; row<charheight; row++) {
 		next = FigData.find_first_of('\n', current);
 		line = FigData.substr(current, next - current);
 		current = next + 1;
@@ -96,7 +92,7 @@ int F3DFIGFont::DrawCharacter(DirectX::XMFLOAT3 translate, int inChar)
 	auto vTranslateY = XMVectorSet(0.f, blockSize_*-1, 0.f, 0.f);
 	auto vTranslateZ = XMVectorSet(0.f, 0.f, blockSize_*-1, 0.f);
 	auto charToWrite = font_.GetCharacter(inChar);
-	translate.x += (charToWrite.maxWidth - 1) * blockSize_;
+	translate.x += static_cast<float>(charToWrite.maxWidth - 1) * blockSize_;
 	auto scale = XMVectorSet(blockSize_, blockSize_, blockSize_, 1.f);
 	auto local = XMMatrixMultiply(XMLoadFloat4x4(&world_), XMMatrixScalingFromVector(scale));
 	local = XMMatrixMultiply(local, XMMatrixTranslationFromVector(XMVectorSet(translate.x, translate.y, translate.z, 0)));
@@ -104,7 +100,7 @@ int F3DFIGFont::DrawCharacter(DirectX::XMFLOAT3 translate, int inChar)
 		auto localz = local;
 		for (auto &row : charToWrite.scanline){
 			auto local2 = local;
-			for (int i = row.length() - 1; i >= 0; i--){
+			for (auto i = static_cast<int>(row.length()) - 1; i >= 0; i--){
 				local2 = XMMatrixMultiply(local2, XMMatrixTranslationFromVector(vTranslateX));
 				auto local3 = XMMatrixMultiply(local2, XMLoadFloat4x4(&orientation_));
 				if (row[i] == '#')
