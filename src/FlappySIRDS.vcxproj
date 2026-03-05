@@ -77,7 +77,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <ExceptionHandling>Sync</ExceptionHandling>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>USING_XAUDIO2_REDIST;WIN32;_DEBUG;DEBUG;PROFILE;_WINDOWS;_WIN32_WINNT=0x0602;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USING_XAUDIO2_REDIST;WIN32;_DEBUG;DEBUG;PROFILE;_WINDOWS;_WIN32_WINNT=0x0602;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <AdditionalIncludeDirectories>DirectXTK\inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -117,7 +117,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <ExceptionHandling>Sync</ExceptionHandling>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>DirectXTK\inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -191,18 +191,26 @@
   <ItemGroup>
     <ClInclude Include="3DText.h" />
     <ClInclude Include="DebugMe.h" />
+    <ClInclude Include="DrawSirdsTo.h" />
     <ClInclude Include="FlappyData.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="IntroScene.h" />
     <CLInclude Include="resource.h" />
+    <ClInclude Include="SirdsDrawer.h" />
+    <ClInclude Include="SpiralIntro.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FlappySirds.rc" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="3DText.cpp" />
+    <ClCompile Include="DrawSirds.cpp" />
+    <ClCompile Include="DrawSirdsTo.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="IntroScene.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="SpiralIntro.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="directx.ico" />

@@ -1,6 +1,5 @@
 #pragma once
 #define WINVER 0x0605
-#define NOMINMAX
 #include <Windows.h>
 #include <d3d11.h>
 #include <d2d1.h>
@@ -22,6 +21,10 @@
 #include "SimpleMath.h"  // For Matrix types
 
 #include "FlappyData.h"
+#include "IntroScene.h"
+#include "SpiralIntro.h"
+#include "DrawSirds.h"
+#include "Background.h"
 
 #include <memory>
 #include <vector>
@@ -63,6 +66,7 @@ private:
     void InitGame();
     void InitAudio();
     void Init3DFont();
+    void InitDrawer();
     // Render/update
     void Render();
     void RenderToTarget(ID3D11RenderTargetView* RenderTargetView, ID3D11DepthStencilView* DepthStencilView, ID3D11ShaderResourceView* pZResource, float t, bool present);
@@ -77,10 +81,15 @@ private:
     void NewGame();
     void DrawScene(float t);
     void DrawColumn(float x, float y, bool up) const;
-    void DisplayIntro(float t);
+    void DisplayIntro2(float t) const;
     void DisplayEnd(float t);
     void WobblingText(int rows, float blockSise, float t, float x, float y, float z, const std::string& text);
     void OnMouseButtonDown(int xPos, int yPos) const;
+
+    // Background management
+    void LoadStoredBackgrounds();                    // populate stored list (stub / load from resources)
+    void AddStoredBackground(const SIRDS::BackgroundConfig& bg);
+    void ChangeBackground(size_t index);                // copy stored background -> active background
 
 private:
     // Window / device
@@ -135,6 +144,25 @@ private:
     std::unique_ptr<DirectX::SoundEffect> m_HeronSoundEffect;
     std::unique_ptr<DirectX::SoundEffect> m_BuzzSoundEffect;
     std::deque<float> Columns;
+
+    // Debug flag: show the rendered screen (pre-stereogram) instead of the generated stereogram
+    bool m_debugShowPreSirds = false;
+
+    // Intro scene extracted into its own class
+    std::unique_ptr<IntroScene> m_introScene;
+    std::unique_ptr<SpiralIntro> m_spiralIntroScene;
+    SIRDS::SIRDSDrawer m_sirdsDrawer;
+    std::unique_ptr <SIRDS::DrawSirdsInterface> m_drawer;
+    SIRDS::Background m_Backbitmap;
+    // Stored backgrounds list (user-switchable)
+    std::vector<SIRDS::BackgroundConfig> m_storedBackgrounds;
+
+    // store client size used when initializing / reinitializing drawers
+    UINT m_clientWidth = 0;
+    UINT m_clientHeight = 0;
+
+    // current index in stored backgrounds
+    size_t m_currentBackgroundIndex = 0;
 
     // Static pointer to current instance for static wndproc
     static Game* s_instance;

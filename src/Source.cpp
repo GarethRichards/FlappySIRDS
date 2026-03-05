@@ -1,6 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include <windows.h>
+#include <Windows.h>
 
 #include <d3d11.h>
 #include <d2d1.h>
@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <WinBase.h>
 #include "FlappyData.h"
+#include "SirdsDrawer.h"
 
 #define MYRAND (rand())
 
@@ -174,16 +175,3 @@ private:
 
 	vector<UINT32> pixels;
 };
-
-// Backwards-compatible free function wrappers (matching previous declarations)
-// These allow existing callers (e.g. Game.cpp) to remain unchanged.
-
-void InitStatics(const ViewingParameters& prams, int iWidth_, int iHeight_)
-{
-	SirdsDrawer::GetInstance().InitStatics(prams, iWidth_, iHeight_);
-}
-
-void ZBuffersToDrawer(vector<float>& lzbuf, vector<float>& rzbuf, vector<UINT>& iPixels, bool hidden)
-{
-	SirdsDrawer::GetInstance().ZBuffersToDrawer(lzbuf, rzbuf, iPixels, hidden);
-}

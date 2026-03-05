@@ -13,6 +13,16 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IntroScene.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="SpiralIntro.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawSirds.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawSirdsTo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CLInclude Include="resource.h">
@@ -30,6 +40,14 @@
     <ClInclude Include="FlappyData.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="IntroScene.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SpiralIntro.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SirdsDrawer.h" />
+    <ClInclude Include="DrawSirdsTo.h" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="Blue_Heron.wav">

@@ -7,12 +7,17 @@
 #include "ScreenGrab.h"
 #include "resource.h"
 #include "DebugMe.h"
-
+#include "IntroScene.h"
+#include "SpiralIntro.h"
+#include "SirdsDrawer.h"  
+#include "Background.h"
+#include "DrawSirdsTo.h"
 #include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <time.h>
 #include <array>
+#include <random>
 
 using namespace DirectX;
 using namespace concurrency;
@@ -27,9 +32,6 @@ static inline uint64_t NowMs()
         ).count()
     );
 }
-
-void InitStatics(const ViewingParameters &params, int iWidth_, int iHeight_);
-void ZBuffersToDrawer(vector<float>& lzbuf, vector<float>& rzbuf, vector<UINT>& iPixels, bool hidden);
 
 Game* Game::s_instance = nullptr;
 
@@ -56,9 +58,10 @@ HRESULT Game::Initialize(HINSTANCE hInstance, int nCmdShow)
         Cleanup();
         return hr;
     }
-	InitGame();
+    InitDrawer();
+    InitGame();
     Init3DFont();
-	InitAudio();
+    InitAudio();
     return S_OK;
 }
 
@@ -119,6 +122,8 @@ void Game::Cleanup()
     m_teapot.reset();
     m_dodec.reset();
     myFont.reset();
+    m_introScene.reset();
+	m_spiralIntroScene.reset();
 }
 
 HRESULT Game::InitWindow(HINSTANCE hInstance, int nCmdShow)
@@ -154,6 +159,11 @@ HRESULT Game::InitWindow(HINSTANCE hInstance, int nCmdShow)
     return S_OK;
 }
 
+void Game::InitDrawer()
+{
+
+}
+
 HRESULT Game::InitDevice()
 {
     auto hr = S_OK;
@@ -162,6 +172,10 @@ HRESULT Game::InitDevice()
     GetClientRect(m_hWnd, &rc);
     UINT width = rc.right - rc.left;
     UINT height = rc.bottom - rc.top;
+
+    // store client size for reinitializing drawer when background changes
+    m_clientWidth = width;
+    m_clientHeight = height;
 
     UINT createDeviceFlags = 0;
 #ifdef _DEBUG
@@ -327,8 +341,92 @@ HRESULT Game::InitDevice()
     ID2D1Factory* m_pDirect2dFactory;
     D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_pDirect2dFactory);
 
+    m_drawer = std::make_unique<SIRDS::DrawSIRDSToBitmap>();
+	m_drawer->Init(m_Backbitmap.config_);
+    m_drawer->InitBackground(width, height);
+    m_drawer->InitPicture(width, height,
+        [](int ) {
+            /* No feedback needed */
+        });
+
+    // Populate stored backgrounds (example: store the current/default background)
+    LoadStoredBackgrounds();
+
     DebugOut() << "Init Device Complete";
     return S_OK;
+}
+
+void Game::LoadStoredBackgrounds()
+{
+    // Example behavior: ensure at least the current background is stored.
+    // Replace this with loading backgrounds from disk/resources as needed.
+    if (m_storedBackgrounds.empty())
+    {
+        SIRDS::BackgroundConfig config;
+        config.density_ = 64;
+        config.density2_ = 128;
+        config.wolframNumber_ = 1236;
+        config.method_ = 1;
+        config.pixelSize_ = 1;
+        config.color1_ = 0xFF010101;
+        config.color2_ = 0xFF00FF00;
+        config.color3_ = 0xFF7700FF;
+        m_storedBackgrounds.emplace_back(config);
+
+        config.density_ = 64;
+		config.density2_ = 164;
+		config.wolframNumber_ = 1236;
+        config.method_ = 1;
+        config.pixelSize_ = 2;
+        config.color1_ = 0xFF010101;
+        config.color2_ = 0xFF00FF00;
+        config.color3_ = 0xFF7700FF;
+        m_storedBackgrounds.emplace_back(config);
+
+        config.density_ = 64;
+        config.density2_ = 164;
+        config.wolframNumber_ = 90;
+        config.method_ = 3;
+        config.pixelSize_ = 2;
+        config.color1_ = 0xFF010101;
+        config.color2_ = 0xFF00FF00;
+        config.color3_ = 0xFF7700FF;
+        m_storedBackgrounds.emplace_back(config);
+
+        config.density_ = 64;
+        config.density2_ = 164;
+        config.wolframNumber_ = 1236;
+        config.method_ = 4;
+        config.pixelSize_ = 2;
+        config.color1_ = 0xFF010101;
+        config.color2_ = 0xFF00FF00;
+        config.color3_ = 0xFF7700FF;
+        m_storedBackgrounds.emplace_back(config);
+    }
+}
+
+void Game::AddStoredBackground(const SIRDS::BackgroundConfig& bg)
+{
+    m_storedBackgrounds.push_back(bg);
+}
+
+void Game::ChangeBackground(size_t index)
+{
+    if (index >= m_storedBackgrounds.size())
+        return;
+
+    // Copy stored background into the active background used by the drawer.
+    // Background copies non-image members and the ScratchImage if it supports copy/move.
+    m_Backbitmap.config_ = m_storedBackgrounds[index];
+    // Re-initialize the drawer so it picks up the new background pixels.
+    if (m_drawer)
+    {
+        m_drawer->Init(m_Backbitmap.config_);
+        // Use stored client size to reconfigure background and picture.
+        m_drawer->InitBackground(m_clientWidth, m_clientHeight);
+        m_drawer->InitPicture(m_clientWidth, m_clientHeight,
+            [](int ) { /* no progress callback here */ });
+    }
 }
 
 void Game::Init3DFont()
@@ -367,6 +465,10 @@ void Game::InitGame()
     // Initialize the world matrices
     g_World = XMMatrixIdentity();
     NewGame();
+
+    // create intro scene instance (extracted from Game::DisplayIntro)
+    m_introScene = std::make_unique<IntroScene>(m_cube.get(), m_teapot.get(), m_dodec.get(), &flappyData, zoffset);
+    m_spiralIntroScene = std::make_unique<SpiralIntro>(m_cube.get(), m_teapot.get(), m_dodec.get(), &flappyData, zoffset);
 
     flappyData.mode = GameMode::Intro;
 }
@@ -433,6 +535,25 @@ LRESULT Game::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
         PostQuitMessage(0);
         break;
     case WM_KEYDOWN:
+        // Press 'B' to cycle backgrounds (copies from stored list)
+        if (wParam == 'B')
+        {
+            if (!m_storedBackgrounds.empty())
+            {
+                m_currentBackgroundIndex = (m_currentBackgroundIndex + 1) % m_storedBackgrounds.size();
+                ChangeBackground(m_currentBackgroundIndex);
+                DebugOut() << "Background changed to index " << m_currentBackgroundIndex;
+            }
+            break;
+        }
+        // F1 toggles debug view: show pre-stereogram screen
+        if (wParam == VK_F1)
+        {
+            m_debugShowPreSirds = !m_debugShowPreSirds;
+            DebugOut() << "Debug pre-sirds: " << m_debugShowPreSirds;
+            break;
+        }
+
         if (flappyData.mode != GameMode::Play) {
             float tKeyPress = GetElapsedTime();
             if (abs(tKeyPress - flappyData.lastKeyPress) < .4)
@@ -510,8 +631,13 @@ void Game::DrawScene(float t)
     local = XMMatrixMultiply(g_World, XMMatrixTranslationFromVector(vTranslate));
     m_Rectangle->Draw(local, g_View, g_Projection, Colors::WhiteSmoke, nullptr);
 
-    if (flappyData.mode == GameMode::Intro)
-        DisplayIntro(t);
+    // use the extracted IntroScene when in Intro mode
+    //if (flappyData.mode == GameMode::Intro && m_introScene)
+    //   m_introScene->Draw(t, g_World, g_View, g_Projection);
+
+    if (flappyData.mode == GameMode::Intro && m_spiralIntroScene)
+        m_spiralIntroScene->Draw(t, g_World, g_View, g_Projection);
+
     if (flappyData.mode == GameMode::End)
         DisplayEnd(flappyData.animateT);
 }
@@ -542,12 +668,12 @@ void Game::WobblingText(int rows, float blockSise, float t, float x, float y, fl
     myFont->SetOrientation(rotateF);
     myFont->DrawString(translate, text);
 }
-
+/*
 void Game::DisplayEnd(float t)
 {
     float t2 = sin(8.f * t)*.75f;
     string s = std::to_string(flappyData.score);
-    WobblingText(3, .035f, t2, 0, .4f, zoffset -.1f, s);
+    WobblingText(3, .035f, t2, 0, .45f, zoffset -.2f, s);
 
     flappyData.highScore = std::max(flappyData.highScore, flappyData.score);
 
@@ -556,19 +682,19 @@ void Game::DisplayEnd(float t)
     
     if (w % 3 == 1)
     {
-        WobblingText(3, .035f, -t2, 0, .1f, zoffset - .1f, "HIGH");
-        WobblingText(3, .035f, -t2, 0, -.2f, zoffset - .1f, std::to_string(flappyData.highScore));
+        WobblingText(3, .035f, -t2, 0, .1f, zoffset - .2f, "HIGH");
+        WobblingText(3, .035f, -t2, 0, -.2f, zoffset - .2f, std::to_string(flappyData.highScore));
     }
     if (w % 3 == 0)
     {
-        WobblingText(3, .035f, -t2, 0.1f, .0f, zoffset - .1f, "OUCH!");
+        WobblingText(3, .035f, -t2, 0.1f, .0f, zoffset - .2f, "OUCH!");
     }
     if (w % 2 == 0)
     {
         auto x = static_cast<float>(ticks - w * 10000);
         x = 2.f * x / 10000.f - 1.f;
-        XMFLOAT3 translate(x, 0.f, zoffset);
-        XMFLOAT3 translate2(x*-1, 0.f, zoffset);
+        XMFLOAT3 translate(x, .2f, zoffset + .25f);
+        XMFLOAT3 translate2(x*-1, -0.2f, zoffset -.25f);
         XMVECTOR rotateQ = XMQuaternionRotationRollPitchYawFromVector(XMVectorSet(0.f, x * 5, 0.f, 0.f));
         if (w % 2 == 0)
         {
@@ -591,27 +717,106 @@ void Game::DisplayEnd(float t)
         }
     }
 }
+*/
 
-void Game::DisplayIntro(float t)
+void Game::DisplayEnd(float /*t*/)
 {
-    float t2 = sin(8.f * t)*.6f;
+    // Parameters you can tweak
+    static const float kOrbitRadius = 1.0f;
+    static const float kOrbitSpeed = 1.2f;    // radians/sec
+    static const float kSpinSpeed = 2.5f;     // radians/sec
+    static const float kSpringStiffness = 24.f;
+    static const float kSpringDamping = 6.f;
+    static const float PI = 3.14159265358979323846f;
 
-    WobblingText(3, .028f, t2, 0, .3f, zoffset - 0.1f, "FLAPPY");
-    WobblingText(3, .028f, -t2, 0, .0f, zoffset - 0.1f, "DOT");
+    // How many teapots and dodecahedra to draw (set this to desired 'n')
+    static const int orbitCount = 4; // <-- change this to display n teapots and n dodecs
 
-    XMFLOAT3 translate(-0.9f, -.25f, zoffset - 0.1f);
-    XMVECTOR Scaling = XMVectorSet(.3f, .3f, .3f, .3f);
-    XMVECTOR rotateQ = XMQuaternionRotationRollPitchYawFromVector(XMVectorSet(0.f, flappyData.animateT, 0.f, 0.f));
-    auto local = XMMatrixMultiply(g_World, XMMatrixAffineTransformation(Scaling, XMVectorSet(0.f, 0.f, 0.f, 0.f), rotateQ,
-        XMVectorSet(translate.x, translate.y, translate.z, 0)));
-    m_teapot->Draw(local, g_View, g_Projection, Colors::WhiteSmoke, nullptr);
+    static std::mt19937 rng((unsigned)time(nullptr));
+    static std::uniform_real_distribution<float> ur(-1.f, 1.f);
 
-    translate = XMFLOAT3(.6f, -.3f, zoffset - 0.1f);
-    Scaling = XMVectorSet(.15f, .15f, .15f, .15f);
-    rotateQ = XMQuaternionRotationRollPitchYawFromVector(XMVectorSet(0.f, -flappyData.animateT * 8.f, 0.f, 0.f));
-    local = XMMatrixMultiply(g_World, XMMatrixAffineTransformation(Scaling, XMVectorSet(0.f, 0.f, 0.f, 0.f), rotateQ,
-        XMVectorSet(translate.x, translate.y, translate.z, 0)));
-    m_dodec->Draw(local, g_View, g_Projection, Colors::WhiteSmoke, nullptr);
+    // Compute elapsed ms since death (DisplayEnd is shown after deathStart)
+    uint64_t ticks = GetTickCount64();
+    uint64_t ageMs = (ticks > flappyData.deathStart) ? (ticks - flappyData.deathStart) : 0;
+    float age = ageMs / 1000.0f;
+
+    if (orbitCount > 0)
+    {
+        // global orbit phase
+        float orbitPhase = age * kOrbitSpeed;
+
+        // Draw 'orbitCount' teapots and 'orbitCount' dodecs, evenly distributed around the orbit
+        for (int i = 0; i < orbitCount; ++i)
+        {
+            // phase for this slot
+            float phase = orbitPhase + (2.0f * PI * i) / static_cast<float>(orbitCount);
+
+            // TEAPOT (slot i)
+            {
+                // small per-instance variation to avoid static layout
+                float radiusScale = 0.7f + 0.12f * sinf(age * 0.3f + i);
+                float tx = cosf(phase) * (kOrbitRadius * radiusScale);
+                float tz = sinf(phase) * (kOrbitRadius * (0.55f + 0.05f * (i % 2))) + 1.5f;
+                float ty = 0.25f + 0.18f * sinf(age * (1.8f + 0.1f * i) + i);
+
+                float scale = 0.45f * (1.0f - 0.05f * i); // slightly smaller for later items
+                XMFLOAT3 translate(tx, ty, tz);
+                XMVECTOR Scaling = XMVectorSet(scale, scale, scale, scale);
+                XMVECTOR rotateQ = XMQuaternionRotationRollPitchYawFromVector(
+                    XMVectorSet(age * (kSpinSpeed * (0.9f + 0.08f * i)), age * (0.4f + 0.06f * i), 0.f, 0.f));
+                auto local = XMMatrixMultiply(g_World, XMMatrixAffineTransformation(Scaling, XMVectorZero(), rotateQ,
+                    XMVectorSet(translate.x, translate.y, translate.z, 0)));
+                m_teapot->Draw(local, g_View, g_Projection, Colors::WhiteSmoke, nullptr);
+            }
+
+            // DODEC (slot i) - offset phase so they don't overlap the teapots
+            {
+                float phaseD = phase + (PI / static_cast<float>(orbitCount)); // staggered
+                float radiusScaleD = 0.65f + 0.1f * cosf(age * 0.25f + i * 0.7f);
+                float dx = cosf(phaseD) * (kOrbitRadius * radiusScaleD);
+                float dz = sinf(phaseD) * (kOrbitRadius * (0.45f + 0.06f * (i % 2))) + 1.55f;
+                float dy = -0.25f + 0.14f * cosf(age * (1.5f + 0.08f * i) - i);
+
+                float scale = 0.32f * (1.0f - 0.04f * i);
+                XMFLOAT3 translate(dx, dy, dz);
+                XMVECTOR Scaling = XMVectorSet(scale, scale, scale, scale);
+                XMVECTOR rotateQ = XMQuaternionRotationRollPitchYawFromVector(
+                    XMVectorSet(-age * (kSpinSpeed * (1.05f + 0.06f * i)), age * (0.55f + 0.05f * i), 0.f, 0.f));
+                auto local = XMMatrixMultiply(g_World, XMMatrixAffineTransformation(Scaling, XMVectorZero(), rotateQ,
+                    XMVectorSet(translate.x, translate.y, translate.z, 0)));
+                m_dodec->Draw(local, g_View, g_Projection, Colors::WhiteSmoke, nullptr);
+            }
+        }
+    }
+
+    // Springy flappy bounce toward center + small rotation
+    // simple mass-spring: v += (-k*x - c*v) * dt
+    static XMFLOAT2 flappyStatePos{ flappyData.flappyX, flappyData.flappyY };
+    static XMFLOAT2 flappyStateVel{ 0.f, 0.f };
+    float dt = 1.0f / 60.0f; // approximate per-frame; OK for display
+    // target sink toward center (0, -0.1) and slightly up for celebration
+    XMFLOAT2 target{ 0.f, 0.2f };
+    XMFLOAT2 disp{ flappyStatePos.x - target.x, flappyStatePos.y - target.y };
+    // spring acceleration
+    XMFLOAT2 accel{ -kSpringStiffness * disp.x - kSpringDamping * flappyStateVel.x,
+                    -kSpringStiffness * disp.y - kSpringDamping * flappyStateVel.y };
+    flappyStateVel.x += accel.x * dt;
+    flappyStateVel.y += accel.y * dt;
+    flappyStatePos.x += flappyStateVel.x * dt;
+    flappyStatePos.y += flappyStateVel.y * dt;
+
+    {
+        XMVECTOR vTranslate = XMVectorSet(flappyStatePos.x, flappyStatePos.y, 0.6f + 0.1f * sinf(age * 6.f), 0.f);
+        XMMATRIX local = XMMatrixMultiply(g_World, XMMatrixTranslationFromVector(vTranslate));
+        // rotate little
+        XMMATRIX rot = XMMatrixRotationY(sinf(age * 5.f) * 0.5f);
+        local = XMMatrixMultiply(local, rot);
+        m_flappy->Draw(local, g_View, g_Projection, Colors::WhiteSmoke, nullptr);
+    }
+
+    // Optional: draw celebratory text (score already shown earlier)
+    string s = "SCORE-" + std::to_string(flappyData.score);
+    WobblingText(2, .03f, sinf(age * 2.5f) * 0.5f, 0.f, -0.1f, zoffset - 0.1f, s);
 }
 
 uint64_t timer1;
@@ -689,7 +894,7 @@ void Game::RenderToTarget(ID3D11RenderTargetView* RenderTargetView, ID3D11DepthS
     auto source = (float*)Images->pixels;
 
     vector<float>& zBuffer = ((flappyData.eye == EyeUsed::LeftEye) ? g_leftZBuffer : g_rightZBuffer);
-	if (zBuffer.size() != bufferSize)
+    if (zBuffer.size() != bufferSize)
         zBuffer.resize(bufferSize);
     timer4 = NowMs();
     std::copy(source, source + bufferSize, zBuffer.begin());
@@ -754,21 +959,52 @@ void Game::Render()
     RenderToTarget(m_pRenderTargetView.Get(), m_pDepthStencilView.Get(), m_pZResource.Get(), t, false);
     timer3 = NowMs();
     if (g_rightZBuffer.empty() || g_leftZBuffer.empty())
-		return;
+        return;
     
-    vector<UINT32> pixels;
-    InitStatics(flappyData.view, (int)width, (int)height);
-    ZBuffersToDrawer(g_leftZBuffer, g_rightZBuffer, pixels, true);
+    // If debug mode is on, show the last rendered backbuffer (pre-stereogram)
+    if (m_debugShowPreSirds)
+    {
+        // Capture swapchain back buffer and display it directly
+        ScratchImage sImage;
+        ID3D11Texture2D* pBackBuffer = nullptr;
+        if (SUCCEEDED(m_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer)) && pBackBuffer)
+        {
+            CaptureTexture(m_pd3dDevice.Get(), m_pImmediateContext.Get(), pBackBuffer, sImage);
+            pBackBuffer->Release();
+
+            if (m_SirdsShader)
+                m_SirdsShader.Reset();
+
+            if (auto hr = DirectX::CreateShaderResourceView(m_pd3dDevice.Get(),
+                sImage.GetImage(0, 0, 0), 1, sImage.GetMetadata(), m_SirdsShader.GetAddressOf());
+                hr == S_OK)
+            {
+                m_pImmediateContext->ClearRenderTargetView(m_pRenderTargetView.Get(), Colors::Black);
+                m_Sprites->Begin(SpriteSortMode_Deferred);
+                m_Sprites->Draw(m_SirdsShader.Get(), XMFLOAT2(0, 0), nullptr, Colors::White);
+                m_Sprites->End();
+                m_pSwapChain->Present(0, 0);
+            }
+        }
+        return;
+    }
+    UINT dpi = GetDpiForWindow(m_hWnd); // m_hwnd is your window handle
+    auto dpiX = static_cast<float>(dpi);
+    m_sirdsDrawer.fPMM_ = dpiX / 25.4f;
+    //InitStatics(flappyData.view, (int)width, (int)height);
+    m_sirdsDrawer.ZBuffersToDrawer(g_leftZBuffer, g_rightZBuffer, (int)width, (int)height, 
+        m_drawer.get());
     timer4 = NowMs();
     ScratchImage sImage;
-    Image img;
+    shared_ptr<DirectX::Image> img = m_drawer->Complete();
+    /*Image img;
     img.width = width;
     img.height = height;
     img.format = DXGI_FORMAT_B8G8R8A8_UNORM;
     img.rowPitch = width * sizeof(UINT);
     img.slicePitch = img.rowPitch * img.height;
-    img.pixels = (uint8_t*)&pixels[0];
-    sImage.InitializeFromImage(img);
+    img.pixels = (uint8_t*)&pixels[0];*/
+    sImage.InitializeFromImage(*img);
     if (m_SirdsShader)
         m_SirdsShader.Reset();
     timer5 = NowMs();
@@ -855,7 +1091,6 @@ void Game::OnResize(UINT width, UINT height)
     m_pDepthStencil2.Reset();
     m_pZResource.Reset();
     m_pZResource2.Reset();
-
     // Resize swap chain buffers
     HRESULT hr = m_pSwapChain->ResizeBuffers(1, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
     if (FAILED(hr))
