@@ -164,6 +164,7 @@ void Game::InitDrawer()
 
 }
 
+
 HRESULT Game::InitDevice()
 {
     auto hr = S_OK;
@@ -348,7 +349,16 @@ HRESULT Game::InitDevice()
         [](int ) {
             /* No feedback needed */
         });
-
+    /*
+    m_Backbitmap.backgroundImage_ = EinsteinTile::GenerateEinsteinTile(21821, width, height, 12);
+    m_drawer2 = std::unique_ptr<SIRDS::DrawSIRDSToColorBitmap>(new SIRDS::DrawSIRDSToColorBitmap(m_Backbitmap));
+    m_drawer2->Init(m_Backbitmap.config_);
+    m_drawer2->InitBackground(width, height);
+    m_drawer2->InitPicture(width, height,
+        [](int) {
+            // No feedback needed 
+        });
+        */
     // Populate stored backgrounds (example: store the current/default background)
     LoadStoredBackgrounds();
 
@@ -402,6 +412,26 @@ void Game::LoadStoredBackgrounds()
         config.color2_ = 0xFF00FF00;
         config.color3_ = 0xFF7700FF;
         m_storedBackgrounds.emplace_back(config);
+
+        config.density_ = 64;
+        config.density2_ = 164;
+        config.wolframNumber_ = 1236;
+        config.method_ = 5;
+        config.pixelSize_ = 2;
+        config.color1_ = 0xFF010101;
+        config.color2_ = 0xFF00FF00;
+        config.color3_ = 0xFF7700FF;
+        m_storedBackgrounds.emplace_back(config);
+        /*
+        config.density_ = 64;
+        config.density2_ = 164;
+        config.wolframNumber_ = 1236;
+        config.method_ = 2;
+        config.pixelSize_ = 2;
+        config.color1_ = 0xFF010101;
+        config.color2_ = 0xFF00FF00;
+        config.color3_ = 0xFF7700FF;
+        m_storedBackgrounds.emplace_back(config);*/
     }
 }
 
@@ -992,8 +1022,9 @@ void Game::Render()
     auto dpiX = static_cast<float>(dpi);
     m_sirdsDrawer.fPMM_ = dpiX / 25.4f;
     //InitStatics(flappyData.view, (int)width, (int)height);
+	SIRDS::DrawSirdsInterface* drawer = m_Backbitmap.config_.method_ == 2 ? m_drawer2.get() : m_drawer.get();
     m_sirdsDrawer.ZBuffersToDrawer(g_leftZBuffer, g_rightZBuffer, (int)width, (int)height, 
-        m_drawer.get());
+        drawer);
     timer4 = NowMs();
     ScratchImage sImage;
     shared_ptr<DirectX::Image> img = m_drawer->Complete();

@@ -153,6 +153,7 @@ private:
     std::unique_ptr<SpiralIntro> m_spiralIntroScene;
     SIRDS::SIRDSDrawer m_sirdsDrawer;
     std::unique_ptr <SIRDS::DrawSirdsInterface> m_drawer;
+    std::unique_ptr <SIRDS::DrawSirdsInterface> m_drawer2;
     SIRDS::Background m_Backbitmap;
     // Stored backgrounds list (user-switchable)
     std::vector<SIRDS::BackgroundConfig> m_storedBackgrounds;

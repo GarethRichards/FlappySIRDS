@@ -22,7 +22,12 @@
     <ClCompile Include="DrawSirds.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="DrawSirdsTo.cpp" />
+    <ClCompile Include="DrawSirdsTo.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Voronoi.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CLInclude Include="resource.h">
@@ -46,8 +51,15 @@
     <ClInclude Include="SpiralIntro.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="SirdsDrawer.h" />
-    <ClInclude Include="DrawSirdsTo.h" />
+    <ClInclude Include="DrawSirdsTo.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SirdsDrawer.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Voronoi.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Media Include="Blue_Heron.wav">

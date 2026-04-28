@@ -80,7 +80,7 @@
       <PreprocessorDefinitions>USING_XAUDIO2_REDIST;WIN32;_DEBUG;DEBUG;PROFILE;_WINDOWS;_WIN32_WINNT=0x0602;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <AdditionalIncludeDirectories>DirectXTK\inc</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
@@ -119,7 +119,7 @@
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>DirectXTK\inc</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
@@ -198,6 +198,7 @@
     <CLInclude Include="resource.h" />
     <ClInclude Include="SirdsDrawer.h" />
     <ClInclude Include="SpiralIntro.h" />
+    <ClInclude Include="Voronoi.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FlappySirds.rc" />
@@ -211,6 +212,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="SpiralIntro.cpp" />
+    <ClCompile Include="Voronoi.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="directx.ico" />

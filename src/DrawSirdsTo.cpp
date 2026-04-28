@@ -4,9 +4,13 @@
 
 #include "DrawSirdsTo.h"
 #include <algorithm>
+#include <cmath>
+#include <cstring>          // <- added for memcpy
+#include "Voronoi.h"
 
 using namespace std;
 using namespace SIRDS;
+using namespace Voronoi;
 
 DrawSIRDSToBitmap::DrawSIRDSToBitmap() = default;
 
@@ -225,6 +229,9 @@ void DrawSIRDSToBitmap::SirdsPicAlgo(int y, std::vector<SIRDS::Llist> &same)
 	case 4:
 		SirdsPicWolfram3(y, same);
 		break;
+	case 5:
+		SirdsPicVoronoi(y, same);
+		break;
 	}
 }
 
@@ -235,14 +242,19 @@ std::shared_ptr<DirectX::Image> DrawSIRDSToBitmap::Complete()
 
 
 DrawSIRDSToColorBitmap::DrawSIRDSToColorBitmap(SIRDS::Background& bg) :
-	pv(nullptr),
 	m_backgroundImage(bg.backgroundImage_),
 	m_scaledBackgroundImage()
 {
+	//m_backgroundImage = bg.backgroundImage_;
 }
 
 DrawSIRDSToColorBitmap::~DrawSIRDSToColorBitmap()
 {
+}
+
+void DrawSIRDSToColorBitmap::Init(SIRDS::BackgroundConfig& bg)
+{
+
 }
 
 bool DrawSIRDSToColorBitmap::InParallel()
@@ -297,4 +309,53 @@ void DrawSIRDSToColorBitmap::SirdsPicAlgo(int y, std::vector<SIRDS::Llist> &same
 std::shared_ptr<DirectX::Image> DrawSIRDSToColorBitmap::Complete()
 {
 	return m_picture;
+}
+
+// Voronoi-based "stone" tiles. Uses Voronoi cell distribution, per-cell hue
+// variation and a thin crack line where distance to site is near border.
+void DrawSIRDSToBitmap::SirdsPicVoronoi(int y, std::vector<SIRDS::Llist>& same)
+{
+	auto* pv = reinterpret_cast<UINT32*>(m_picture->pixels);
+	auto* pa = &pv[y * m_Width];
+	UINT32* pam1 = nullptr;
+	if (y != 0)
+		pam1 = &pv[(y - 1) * m_Width];
+
+	const float cellSize = std::max(8.0f, float(m_PixelSize * 6)); // tile size in pixels (tunable)
+	const int seed = int(m_WolframNumber & 0x7FFF);
+	const float crackWidth = 0.9f; // how wide cracks appear (tunable)
+
+	for (UINT x = 0; x < same.size(); x++) {
+		UINT pixpos = same[x].f;
+		if (pixpos != x) {
+			pa[x] = pa[pixpos];
+			continue;
+
+		}
+
+		// Compute Voronoi nearest site and distance
+		float dist; uint32_t siteHash;
+		VoronoiNearest(float(x) + 0.5f, float(y) + 0.5f, cellSize, seed, dist, siteHash);
+
+		// Normalize distance: max distance to consider ~ cellSize*0.8
+		float t = dist / (cellSize * 0.8f);
+		if (t > 1.0f) t = 1.0f;
+
+		// Determine base stone color per site (use siteHash to perturb color)
+		// Mix color1/color2/color3 subtly per site
+		float h = (siteHash & 0xFFFF) / float(0x10000);
+		uint32_t base = (h < 0.5f) ? LerpColor(color1, color2, h * 2.0f) : LerpColor(color2, color3, (h - 0.5f) * 2.0f);
+
+		// Darken near cracks: where t is close to 0.5 create thin dark lines
+		float crackFactor = fabsf(t - 0.5f) * 2.0f; // 0 at center of crack, 1 away
+		// Make cracks darker: invert crackFactor and apply threshold
+		float crack = 1.0f - std::min(1.0f, crackFactor * (1.0f / crackWidth));
+
+		// Combine base color with a darker tone based on crack
+		uint32_t darkTone = LerpColor(base, 0xFF000000u | (base & 0x00FFFFFFu), 0.45f);
+		uint32_t final = LerpColor(base, darkTone, crack * 0.8f);
+
+		pa[x] = final;
+
+	}
 }

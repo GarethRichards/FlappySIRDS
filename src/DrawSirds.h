@@ -63,7 +63,9 @@ namespace SIRDS {
 			float heightF = 0.f;  // float height
 			float pmm = 0.f;      // pixels per mm
 			bool bReverse = false;
-		} cached_;
+		};
+
+		CachedParameters cached_;
 
 		// zNear / zFar are constants used by the depth -> z conversion
 		static constexpr float zNear = 1.88976383f;

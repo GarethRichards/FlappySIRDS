@@ -26,16 +26,17 @@ namespace SIRDS {
 		DrawSIRDSToBitmap();
 		~DrawSIRDSToBitmap() override;
 
-		void Init(SIRDS::BackgroundConfig& bg);
-		bool InParallel();
-		void InitBackground(int width, int height);
-		void InitPicture(int width, int height, std::function<void(int)> progress);
+		void Init(SIRDS::BackgroundConfig& bg) override;
+		bool InParallel() override;
+		void InitBackground(int width, int height) override;
+		void InitPicture(int width, int height, std::function<void(int)> progress) override;
 		void SirdsPicAlgo1(int y, std::vector<SIRDS::Llist> &same);
 		void SirdsPicAlgo2(int y, std::vector<SIRDS::Llist> &same);
 		void SirdsPicWolfram(int y, std::vector<SIRDS::Llist> &same);
 		void SirdsPicWolfram3(int y, std::vector<SIRDS::Llist> &same);
-		void SirdsPicAlgo(int y, std::vector<SIRDS::Llist> &same);
-		std::shared_ptr<DirectX::Image> Complete();
+		void SirdsPicVoronoi(int y, std::vector<SIRDS::Llist> &same);
+		void SirdsPicAlgo(int y, std::vector<SIRDS::Llist> &same) override;
+		std::shared_ptr<DirectX::Image> Complete() override;
 	};
 
 
@@ -46,14 +47,15 @@ namespace SIRDS {
 		std::shared_ptr<DirectX::Image> m_picture;
 		UINT m_BackgroundWidth;
 		UINT m_BackgroundHeight;
-		BYTE *pv;
+		BYTE* pv{ nullptr };
 	public:
 		DrawSIRDSToColorBitmap(SIRDS::Background& bg);
-		virtual ~DrawSIRDSToColorBitmap();
-		bool InParallel();
-		void InitBackground(int width, int height);
-		void InitPicture(int width, int height, std::function<void(int)> progress);
-		void SirdsPicAlgo(int y, std::vector<SIRDS::Llist> &same);
+		~DrawSIRDSToColorBitmap() override;
+		void Init(SIRDS::BackgroundConfig& bg) override;
+		bool InParallel() override;
+		void InitBackground(int width, int height) override;
+		void InitPicture(int width, int height, std::function<void(int)> progress) override;
+		void SirdsPicAlgo(int y, std::vector<SIRDS::Llist> &same) override;
 		std::shared_ptr<DirectX::Image> Complete();
 	};
 
